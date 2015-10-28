@@ -8,6 +8,7 @@ var iduri = require('cmd-util').iduri
 var unique = require('./lib/util').unique
 var pushList = require('./lib/util').pushList
 var parseError = require('./lib/util').parseError
+var uglify = require('uglify-js')
 require('colors')
 var pad = require('pad')
 
@@ -21,11 +22,16 @@ var defOpts = {
     , handlebars: {
         id: 'gallery/handlebars/1.0.2/runtime'
     }
+    , minify: true
 }
 
 var codeOpts = {
     beautify: true
     , comments: true
+}
+var minifyOpts = {
+    fromString: true
+    , output: {}
 }
 
 module.exports = function(_opts) {
@@ -89,7 +95,7 @@ module.exports = function(_opts) {
         var result = getDeps(item)
         var deps = filterDeps([ item.id ].concat(result.conList))
 
-        var cont = deps.map(function(dep) {
+        var _cont = deps.map(function(dep) {
             var t = itemMap[dep]
             if (t == null) {
                 throw parseError(item.file.path, `"${dep}" not found`)
@@ -98,14 +104,14 @@ module.exports = function(_opts) {
         })
         .join('\n\n')
 
-        item.file.contents = new Buffer(cont)
+        var cont = opts.minify ? uglify.minify(_cont, minifyOpts) : _cont
+        item.file.contents = new Buffer(cont.code)
     }
 
-    function progress(total, type, file, index) {
-        var fname = path.relative(file.cwd, file.path)
-        var prog = (index + 1) + '/' + total
-        var msg = `${'-->'.green} ${type} ${fname.cyan} ...`
-        gutil.log(pad(msg, 90, { colors: true }) + prog.green)
+    function progress(total, type, index) {
+        var prog = Math.floor((index + 1) * 100 / total)
+        var msg = `\t${'-> [js]'.green} ${type} ... ${prog}${prog == 100 ? '\n' : ''}`
+        process.stdout.write(pad(msg, 90, { colors: true }) + '\r')
     }
 
     return es.through(function(file) {
@@ -115,13 +121,13 @@ module.exports = function(_opts) {
         try {
             var progTrans = progress.bind(null, fileList.length, 'trans')
             fileList.forEach(function(file, index) {
-                progTrans(file, index)
+                progTrans(index)
                 doTrans(file)
             })
 
-            var progConcat = progress.bind(null, itemList.length, 'concat')
+            var progConcat = progress.bind(null, itemList.length, `concat${opts.minify ? ' & minify' : ''}`)
             itemList.forEach(function(item, index) {
-                progConcat(item.file, index)
+                progConcat(index)
                 doConcat(item)
                 self.emit('data', item.file)
             })
