@@ -104,8 +104,8 @@ module.exports = function(_opts) {
         })
         .join('\n\n')
 
-        var cont = opts.minify ? uglify.minify(_cont, minifyOpts) : _cont
-        item.file.contents = new Buffer(cont.code)
+        var cont = opts.minify ? uglify.minify(_cont, minifyOpts).code : _cont
+        item.file.contents = new Buffer(cont)
     }
 
     function progress(total, type, index) {
