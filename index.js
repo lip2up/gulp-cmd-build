@@ -9,6 +9,7 @@ var unique = require('./lib/util').unique
 var pushList = require('./lib/util').pushList
 var parseError = require('./lib/util').parseError
 var uglify = require('uglify-js')
+var _ = require('underscore')
 require('colors')
 var pad = require('pad')
 
@@ -40,47 +41,6 @@ module.exports = function(_opts) {
     var itemList = []
     var itemMap = {}
 
-    function getDeps(item) {
-        return item.deps.reduce(function(result, dep) {
-            var reqList = result.reqList
-            var conList = result.conList
-
-            var id = iduri.absolute(item.id, dep)
-
-            if (id != opts.handlebars.id) {
-                var t = itemMap[id]
-                if (t != null) {
-                    var r = getDeps(t)
-                    pushList(reqList, dep, r.reqList)
-                    dep[0] == '.' && pushList(conList, id, r.conList)
-                } else {
-                    throw parseError(item.file.path, `"${id}" not found`)
-                }
-            }
-
-            return result
-        }, { reqList: [], conList: [] })
-    }
-
-    function filterDeps(deps) {
-        return unique(deps).filter(function(dep) {
-            return dep != opts.handlebars.id
-        })
-    }
-
-    function getText(item) {
-        var astCache = item.astCache
-        if (astCache != null) {
-            var result = getDeps(item)
-            var reqList = filterDeps(result.reqList)
-            var code = ast.modify(astCache, { dependencies: reqList })
-            var text = code.print_to_string(codeOpts)
-        } else {
-            var text = item.text
-        }
-        return text
-    }
-
     function doTrans(file) {
         var extname = path.extname(file.path)
         var parser = opts.parsers[extname]
@@ -92,50 +52,82 @@ module.exports = function(_opts) {
     }
 
     function doConcat(item) {
-        var result = getDeps(item)
-        var deps = filterDeps([ item.id ].concat(result.conList))
+        var meta = ast.parseFirst(item.astCache)
 
-        var _cont = deps.map(function(dep) {
-            var t = itemMap[dep]
-            if (t == null) {
-                throw parseError(item.file.path, `"${dep}" not found`)
+        var depMap = {}
+        var astList = meta.dependencies.reduce(function(list, dep) {
+            if (dep[0] == '.') {
+                var id = iduri.absolute(meta.id, dep)
+                if (!depMap[id]) {
+                    depMap[id] = true
+                    var item = itemMap[id]
+                    var astCache = item.astCache
+                    var srcId = ast.parseFirst(astCache).id
+                    astCache = ast.modify(astCache, function(v) {
+                        return v[0] == '.' ? iduri.absolute(srcId, v) : v
+                    })
+                    list.push(astCache)
+                }
             }
-            return getText(t)
-        })
-        .join('\n\n')
+            return list
+        }, [ item.astCache ])
 
-        var cont = opts.minify ? uglify.minify(_cont, minifyOpts).code : _cont
+        var textList = astList.map(a => a.print_to_string(codeOpts))
+        var _source = textList.join('\n\n')
+        var astCache = ast.getAst(_source)
+        var idList = ast.parse(astCache).map(a => a.id)
+        var source = ast.modify(astCache, {
+            dependencies: function(v) {
+                if (v[0] == '.') {
+                    var altId = iduri.absolute(idList[0], v)
+                    if (_.contains(idList, altId)) {
+                        return v
+                    }
+                }
+                var ext = path.extname(v)
+                // remove useless deps
+                if (ext && /\.(?:html|txt|tpl|handlebars|css)$/.test(ext)) {
+                    return null
+                }
+
+                return v
+            }
+        })
+        .print_to_string(codeOpts)
+
+        var cont = opts.minify ? uglify.minify(source, minifyOpts).code : source
         item.file.contents = new Buffer(cont)
     }
 
     function progress(total, type, index) {
-        var prog = Math.floor((index + 1) * 100 / total)
-        var msg = `\t${'-> [js]'.green} ${type} ... ${prog}${prog == 100 ? '\n' : ''}`
+        var num = Math.floor((index + 1) * 100 / total)
+        var msg = `\t${'-> [js]'.green} ${type} ... ${num}%${num == 100 ? '\n' : ''}`
         process.stdout.write(pad(msg, 90, { colors: true }) + '\r')
     }
 
     return es.through(function(file) {
         fileList.push(file)
     }, function() {
-        var self = this
         try {
             var progTrans = progress.bind(null, fileList.length, 'trans')
-            fileList.forEach(function(file, index) {
+            fileList.forEach((file, index) => {
                 progTrans(index)
                 doTrans(file)
             })
 
             var progConcat = progress.bind(null, itemList.length, `concat${opts.minify ? ' & minify' : ''}`)
-            itemList.forEach(function(item, index) {
+            itemList.forEach((item, index) => {
                 progConcat(index)
                 doConcat(item)
-                self.emit('data', item.file)
+                this.emit('data', item.file)
             })
 
             this.emit('end')
         } catch (ex) {
-            var detail = ex.line ? `(${ex.line})` : ''
-            var msg = `${ex.file}${detail}: ${ex.message}`
+            var detail = ex.file
+                ? `${ex.file}` + (ex.line ? `(${ex.line})` : '') + ': '
+                : ''
+            var msg = `${detail}${ex.message}`
             this.emit('error', new gutil.PluginError('gulp-cmd-build', msg))
         }
     })
