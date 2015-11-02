@@ -38,6 +38,7 @@ var minifyOpts = {
 module.exports = function(_opts) {
     var opts = extend(true, {}, defOpts, _opts)
     var fileList = []
+    var fileMap = {}
     var itemList = []
     var itemMap = {}
 
@@ -107,7 +108,9 @@ module.exports = function(_opts) {
 
     return es.through(function(file) {
         fileList.push(file)
+        fileMap[file.path] = file
     }, function() {
+        opts._fileMap = fileMap
         try {
             var progTrans = progress.bind(null, fileList.length, 'trans')
             fileList.forEach((file, index) => {
