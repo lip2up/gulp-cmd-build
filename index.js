@@ -87,7 +87,7 @@ module.exports = function(_opts) {
                 }
                 var ext = path.extname(v)
                 // remove useless deps
-                if (ext && /\.(?:html|txt|tpl|handlebars|css)$/.test(ext)) {
+                if (ext && /\.(?:html|txt|tpl|hbs|handlebars|css)$/.test(ext)) {
                     return null
                 }
 
