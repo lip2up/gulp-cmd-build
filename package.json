@@ -1,6 +1,6 @@
 {
   "name": "gulp-cmd-build",
-  "version": "0.9.10",
+  "version": "0.9.11",
   "description": "cmd(seajs) module one step build",
   "author": "lip2up",
   "license": "MIT",
@@ -14,7 +14,7 @@
     "event-stream": "^3.3.2",
     "gulp": "^3.9.0",
     "gulp-util": "^3.0.7",
-    "handlebars": "^1.0.11",
+    "handlebars": "1.0.11",
     "node.extend": "^1.1.5",
     "pad": "^1.0.0",
     "uglify-js": "^2.5.0",
