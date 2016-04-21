@@ -24,6 +24,7 @@ var defOpts = {
         id: 'gallery/handlebars/1.0.2/runtime'
     }
     , minify: true
+    , lineMax: 70
 }
 
 var codeOpts = {
@@ -103,7 +104,7 @@ module.exports = function(_opts) {
     function progress(total, type, index) {
         var num = Math.floor((index + 1) * 100 / total)
         var msg = `\t${'-> [js]'.green} ${type} ... ${num}%${num == 100 ? '\n' : ''}`
-        process.stdout.write(pad(msg, 90, { colors: true }) + '\r')
+        process.stdout.write(pad(msg, opts.lineMax, { colors: true }) + '\r')
     }
 
     return es.through(function(file) {
