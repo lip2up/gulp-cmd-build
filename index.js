@@ -63,12 +63,16 @@ module.exports = function(_opts) {
                 if (!depMap[id]) {
                     depMap[id] = true
                     var item = itemMap[id]
-                    var astCache = item.astCache
-                    var srcId = ast.parseFirst(astCache).id
-                    astCache = ast.modify(astCache, function(v) {
-                        return v[0] == '.' ? iduri.absolute(srcId, v) : v
-                    })
-                    list.push(astCache)
+                    if (item) {
+                        var astCache = item.astCache
+                        var srcId = ast.parseFirst(astCache).id
+                        astCache = ast.modify(astCache, function(v) {
+                            return v[0] == '.' ? iduri.absolute(srcId, v) : v
+                        })
+                        list.push(astCache)
+                    } else {
+                        throw 'cannot find ' + id
+                    }
                 }
             }
             return list
@@ -119,6 +123,7 @@ module.exports = function(_opts) {
                 doTrans(file)
             })
 
+
             var progConcat = progress.bind(null, itemList.length, `concat${opts.minify ? ' & minify' : ''}`)
             itemList.forEach((item, index) => {
                 progConcat(index)
@@ -128,10 +133,14 @@ module.exports = function(_opts) {
 
             this.emit('end')
         } catch (ex) {
-            var detail = ex.file
-                ? `${ex.file}` + (ex.line ? `(${ex.line})` : '') + ': '
-                : ''
-            var msg = `${detail}${ex.message}`
+            if (typeof ex == 'string') {
+                var msg = ex
+            } else {
+                var detail = ex.file
+                    ? `${ex.file}` + (ex.line ? `(${ex.line})` : '') + ': '
+                    : ''
+                var msg = `${detail}${ex.message}`
+            }
             this.emit('error', new gutil.PluginError('gulp-cmd-build', msg))
         }
     })
