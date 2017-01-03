@@ -14,26 +14,27 @@ require('colors')
 var pad = require('pad')
 
 var defOpts = {
-    idleading: ''
-    , parsers: {
+    idleading: '',
+    parsers: {
         '.js': require('./lib/jsParser')
         , '.hbs': require('./lib/hbsParser')
         , '.handlebars': require('./lib/hbsParser')
-    }
-    , handlebars: {
+    },
+    handlebars: {
         id: 'gallery/handlebars/1.0.2/runtime'
-    }
-    , minify: true
-    , lineMax: 70
+    },
+    minify: true,
+    lineMax: 70,
+    useES6: false
 }
 
 var codeOpts = {
-    beautify: true
-    , comments: true
+    beautify: true,
+    comments: true
 }
 var minifyOpts = {
-    fromString: true
-    , output: {}
+    fromString: true,
+    output: {}
 }
 
 module.exports = function(_opts) {
@@ -116,32 +117,20 @@ module.exports = function(_opts) {
         fileMap[file.path] = file
     }, function() {
         opts._fileMap = fileMap
-        try {
-            var progTrans = progress.bind(null, fileList.length, 'trans')
-            fileList.forEach((file, index) => {
-                progTrans(index)
-                doTrans(file)
-            })
 
+        var progTrans = progress.bind(null, fileList.length, 'trans')
+        fileList.forEach((file, index) => {
+            progTrans(index)
+            doTrans(file)
+        })
 
-            var progConcat = progress.bind(null, itemList.length, `concat${opts.minify ? ' & minify' : ''}`)
-            itemList.forEach((item, index) => {
-                progConcat(index)
-                doConcat(item)
-                this.emit('data', item.file)
-            })
+        var progConcat = progress.bind(null, itemList.length, `concat${opts.minify ? ' & minify' : ''}`)
+        itemList.forEach((item, index) => {
+            progConcat(index)
+            doConcat(item)
+            this.emit('data', item.file)
+        })
 
-            this.emit('end')
-        } catch (ex) {
-            if (typeof ex == 'string') {
-                var msg = ex
-            } else {
-                var detail = ex.file
-                    ? `${ex.file}` + (ex.line ? `(${ex.line})` : '') + ': '
-                    : ''
-                var msg = `${detail}${ex.message}`
-            }
-            this.emit('error', new gutil.PluginError('gulp-cmd-build', msg))
-        }
+        this.emit('end')
     })
 }
