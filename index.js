@@ -16,9 +16,10 @@ var pad = require('pad')
 var defOpts = {
     idleading: '',
     parsers: {
-        '.js': require('./lib/jsParser')
-        , '.hbs': require('./lib/hbsParser')
-        , '.handlebars': require('./lib/hbsParser')
+        '.js': require('./lib/jsParser'),
+        '.hbs': require('./lib/hbsParser'),
+        '.handlebars': require('./lib/hbsParser'),
+        '.tpl': require('./lib/tplParser'),
     },
     handlebars: {
         id: 'gallery/handlebars/1.0.2/runtime'
