@@ -36,8 +36,8 @@ var codeOpts = {
 var minifyOpts = {
     fromString: true,
     output: {},
-    compress : {
-        screw_ie8 : true
+    compress: {
+        screw_ie8: false
     },
 }
 
