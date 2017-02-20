@@ -35,7 +35,10 @@ var codeOpts = {
 }
 var minifyOpts = {
     fromString: true,
-    output: {}
+    output: {},
+    compress : {
+        screw_ie8 : true
+    },
 }
 
 module.exports = function(_opts) {
