@@ -1,6 +1,6 @@
 {
   "name": "gulp-cmd-build",
-  "version": "0.10.12",
+  "version": "0.10.16",
   "description": "cmd(seajs) module one step build",
   "author": "lip2up",
   "license": "MIT",

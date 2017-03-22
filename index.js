@@ -35,8 +35,13 @@ var codeOpts = {
 }
 var minifyOpts = {
     fromString: true,
-    output: {},
+    mangler: {
+        screw_ie8: false
+    },
     compress: {
+        screw_ie8: false
+    },
+    output: {
         screw_ie8: false
     },
 }
